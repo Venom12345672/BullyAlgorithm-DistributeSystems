@@ -1,7 +1,5 @@
 package bully
 
-import "fmt"
-
 // msgType represents the type of messages that can be passed between nodes
 type msgType int
 
@@ -34,7 +32,6 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 	for {
 		// quit / crash the program
 		if <-quit {
-			fmt.Println(pid, "stops working..")
 			leaderCheck = false
 			leaderCheckCount = 0
 			iAmLeaderCheck = false
@@ -44,13 +41,11 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 		}
 
 		roundNum := <-startRound
-		fmt.Println("MyID: ", pid, roundNum, leader)
 
 		recievingMessages := getMessages(comm[pid], roundNum-1)
 		// node coming back alive
 		if leader == pid && leaderIsAlive {
 			leaderIsAlive = false
-			fmt.Println("node is back alive... ", pid)
 			for key := range comm {
 				msg := &Message{
 					Pid:   pid,
@@ -58,7 +53,6 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 					Type:  LEADER}
 				comm[key] <- *msg
 			}
-			//electionResult <- leader
 		}
 
 		for _, msg := range recievingMessages {
@@ -69,11 +63,9 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 					Type:  OK}
 				comm[msg.Pid] <- *okMsg
 			} else if msg.Type == OK {
-				fmt.Println("Recieved OK Message by: ", pid, " from: ", msg.Pid)
 				iAmLeaderCheck = false
 				iAmLeaderCount = 0
 			} else if msg.Type == ELECTION {
-				fmt.Println("Recieved Election Message by: ", pid, " from: ", msg.Pid)
 				okMsg := &Message{
 					Pid:   pid,
 					Round: roundNum,
@@ -93,15 +85,17 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 				}
 
 			} else if msg.Type == LEADER {
-				fmt.Println("New Leader", msg.Pid)
+				leaderCheck = false
+				leaderCheckCount = 0
 				iAmLeaderCheck = false
+				iAmLeaderCount = 0
+				leaderIsAlive = false
 				electionResult <- msg.Pid
 			}
 		}
 
 		// THE NODE WHO INITATED THE ALGO THE NODE ITSLEF IS THE NEW LEADER
 		if iAmLeaderCheck && iAmLeaderCount >= 2 {
-			fmt.Println("Am the new leader", pid)
 			leaderCheck = false
 			leaderCheckCount = 0
 
@@ -120,7 +114,6 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 
 		// CHECKING LEADER IS ALIVE OR NOT
 		if len(checkLeader) > 0 {
-			fmt.Println("checkLeader", pid)
 			<-checkLeader
 			leaderCheck = true
 			// checkLeader by sending leader a message
@@ -135,7 +128,6 @@ func Bully(pid int, leader int, checkLeader chan bool, comm map[int]chan Message
 
 			leaderCheckCount = 0
 			leaderCheck = false
-			fmt.Println("Leader Dead initiaing algo", pid)
 
 			iAmLeaderCheck = true
 			// leader is ded send message to all above
